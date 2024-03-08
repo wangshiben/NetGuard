@@ -1,0 +1,34 @@
+GET / HTTP/1.1
+Host: localhost:7788
+Connection: keep-alive
+Cache-Control: max-age=0
+sec-ch-ua: "Chromium";v="122", "Not(A:Brand";v="24", "Microsoft Edge";v="122"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Windows"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br
+Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
+Cookie: Idea-b5969ecf=60694da8-95af-4de9-9f5c-4295e3f315d0; Pycharm-4b48f090=4353776c-5bf1-4794-9ad6-d1625a66c629; SESSION=MjI2N2JkMjctYmFmNi00YjUwLTg0ZmEtYzJmNmM4MTU3OGE4
+
+GET /favicon.ico HTTP/1.1
+Host: localhost:7788
+Connection: keep-alive
+sec-ch-ua: "Chromium";v="122", "Not(A:Brand";v="24", "Microsoft Edge";v="122"
+sec-ch-ua-mobile: ?0
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0
+sec-ch-ua-platform: "Windows"
+Accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: no-cors
+Sec-Fetch-Dest: image
+Referer: http://localhost:7788/
+Accept-Encoding: gzip, deflate, br
+Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
+Cookie: Idea-b5969ecf=60694da8-95af-4de9-9f5c-4295e3f315d0; Pycharm-4b48f090=4353776c-5bf1-4794-9ad6-d1625a66c629; SESSION=MjI2N2JkMjctYmFmNi00YjUwLTg0ZmEtYzJmNmM4MTU3OGE4
+
