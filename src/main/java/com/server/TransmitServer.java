@@ -5,9 +5,7 @@ import com.lamba.OnReceivedClientMethod;
 import com.lamba.WhileByteRead;
 
 import java.io.*;
-import java.net.BindException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 
 //public class TestTCPServer {
 //    public static void main(String[] args) {
@@ -108,7 +106,6 @@ public class TransmitServer extends Thread {//TCP转发服务,由临时节点转
                     // 创建线程处理转发
                     ForwardingHandler clientToTargetHandler = null;
                     try {
-
                         clientToTargetHandler = new ForwardingHandler(clientSocket.getInputStream(),this.bufferedSize, targetSocket.getOutputStream(),"readClient:",null);
                        if (this.ClientReceiveBytesMethod !=null) clientToTargetHandler.setOnReceive(this.ClientReceiveBytesMethod);
                        if (this.ClientByteRead !=null) clientToTargetHandler.setWhileByteRead(this.ClientByteRead);
@@ -178,7 +175,7 @@ class ForwardingHandler implements Runnable {
     @Override
     public void run() {
         try {
-            byte[] buffer = new byte[24];
+            byte[] buffer = new byte[this.bufferedSize];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 if (this.whileByteRead!=null) buffer = this.whileByteRead.ReadByte(buffer,0,bytesRead);

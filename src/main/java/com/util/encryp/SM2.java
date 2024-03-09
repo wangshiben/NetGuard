@@ -98,18 +98,7 @@ public class SM2 {
 		return true;
 	}
 
-	/**
-	 * 公钥加密
-	 *
-	 * @param input
-	 *            加密原文
-	 * @param publicKey
-	 *            公钥
-	 * @return
-	 */
-	public byte[] encrypt(String input, ECPoint publicKey) {
-
-		byte[] inputBuffer = input.getBytes();
+	public byte[] encrypt(byte[]inputBuffer,ECPoint publicKey){
 		if (debug)
 			printHexString(inputBuffer);
 
@@ -180,6 +169,20 @@ public class SM2 {
 		}
 
 		return encryptResult;
+	}
+
+	/**
+	 * 公钥加密
+	 *
+	 * @param input
+	 *            加密原文
+	 * @param publicKey
+	 *            公钥
+	 * @return
+	 */
+	public byte[] encrypt(String input, ECPoint publicKey) {
+
+		return encrypt(input.getBytes(),publicKey);
 	}
 
 	public String decryptAsString(byte[] encryptData,BigInteger privateKey){

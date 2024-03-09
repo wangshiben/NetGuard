@@ -6,11 +6,10 @@ import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import org.bouncycastle.math.ec.ECPoint;
 
-public class PingServer {//Http服务器，用于监听端口并返回心跳包 以及公钥
+public class PingHttpServer {//Http服务器，用于监听端口并返回心跳包 以及公钥
     private final int port;
     private final ECPoint publicKey;
     private int MaxQueue=100;//HTTP最大等待数
@@ -20,7 +19,7 @@ public class PingServer {//Http服务器，用于监听端口并返回心跳包 
         MaxQueue = maxQueue;
     }
 
-    public PingServer(int port, ECPoint publicKey) {
+    public PingHttpServer(int port, ECPoint publicKey) {
         this.port = port;
         this.publicKey = publicKey;
     }
