@@ -1,4 +1,4 @@
-package com;
+package com.server;
 
 import com.configPojo.ServerConfig;
 import com.lamba.OnReceivedClientMethod;
@@ -9,23 +9,53 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class TestTCPServer {
-    public static void main(String[] args) {
-        Servers servers = new Servers(7788,"localhost",8080);
-        servers.run();
-    }
-}
+//public class TestTCPServer {
+//    public static void main(String[] args) {
+//        TransmitServer transmitServer = new TransmitServer(7788,"localhost",8080);
+//        transmitServer.run();
+//    }
+//}
 
-class Servers extends Thread {//TCP转发服务,由临时节点转发给接受节点
+public class TransmitServer extends Thread {//TCP转发服务,由临时节点转发给内网穿透接受节点
     private final Integer localPort;
     private final ServerConfig serverConfig;
     private final String[] needCheckServerName={"localhost","127.0.0.1"};
-    public Servers(Integer port,String serverName,Integer targetPort) {
+    //本地对应端口接收到内网穿透流量转发至下线服务器的操作
+    private OnReceivedClientMethod ClientReceiveBytesMethod;
+    private WhileByteRead ClientByteRead;
+    private OnReceivedClientMethod ServerReceiveBytesMethod;
+    private WhileByteRead ServerByteRead;
+    private int bufferedSize=1024;//接收到的字节流缓冲区大小，可选操作
+
+    public void setServerReceiveBytesMethod(OnReceivedClientMethod serverReceiveBytesMethod) {
+        ServerReceiveBytesMethod = serverReceiveBytesMethod;
+    }
+
+    public void setServerByteRead(WhileByteRead serverByteRead) {
+        ServerByteRead = serverByteRead;
+    }
+
+
+
+    public void setBufferedSize(int bufferedSize) {
+        if (bufferedSize==0) throw new IllegalArgumentException("缓冲区大小不能为0!");
+        this.bufferedSize = bufferedSize;
+    }
+
+    public void setClientReceiveBytesMethod(OnReceivedClientMethod clientReceiveBytesMethod) {//设置 监听到数据时候的动作:举例:日志打印服务
+        this.ClientReceiveBytesMethod = clientReceiveBytesMethod;
+    }
+
+    public void setClientByteRead(WhileByteRead clientByteRead) {//接收到数据并要对其修改时候的动作,举例:接收到字节流并加密
+        this.ClientByteRead = clientByteRead;
+    }
+
+    public TransmitServer(Integer port, String serverName, Integer targetPort) {
         this.localPort = port;
         if (isInvalid(serverName,targetPort)) throw new IllegalArgumentException("监听循环，请检查配置!");
         this.serverConfig=new ServerConfig(serverName,targetPort);
     }
-    public Servers(Integer port,ServerConfig serverConfig){
+    public TransmitServer(Integer port, ServerConfig serverConfig){
         this(port,serverConfig.getHost(),serverConfig.getPort());
     }
     private boolean isInvalid(String serverName,Integer targetPort){
@@ -79,21 +109,22 @@ class Servers extends Thread {//TCP转发服务,由临时节点转发给接受�
                     ForwardingHandler clientToTargetHandler = null;
                     try {
 
-                        clientToTargetHandler = new ForwardingHandler(clientSocket.getInputStream(), targetSocket.getOutputStream(),"readClient:",null);
-                        clientToTargetHandler.setOnReceive( bytes->{
-                            System.out.print(new String(bytes));
-                        });
+                        clientToTargetHandler = new ForwardingHandler(clientSocket.getInputStream(),this.bufferedSize, targetSocket.getOutputStream(),"readClient:",null);
+                       if (this.ClientReceiveBytesMethod !=null) clientToTargetHandler.setOnReceive(this.ClientReceiveBytesMethod);
+                       if (this.ClientByteRead !=null) clientToTargetHandler.setWhileByteRead(this.ClientByteRead);
                         Thread clientToTargetThread = new Thread(clientToTargetHandler);
                         clientToTargetThread.start();
 
-                        ForwardingHandler targetToClientHandler = new ForwardingHandler(targetSocket.getInputStream(), clientSocket.getOutputStream(),"readServer:",null);
+                        ForwardingHandler targetToClientHandler = new ForwardingHandler(targetSocket.getInputStream(),this.bufferedSize, clientSocket.getOutputStream(),"readServer:",null);
                         Thread targetToClientThread = new Thread(targetToClientHandler);
+                        if (this.ServerReceiveBytesMethod !=null) clientToTargetHandler.setOnReceive(this.ServerReceiveBytesMethod);
+                        if (this.ServerByteRead !=null) clientToTargetHandler.setWhileByteRead(this.ServerByteRead);
                         targetToClientThread.start();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 } else {
-                    System.exit(0);
+                   return;
                 }
 
         }
@@ -118,12 +149,14 @@ class ForwardingHandler implements Runnable {
     private OnReceivedClientMethod receivedClientMethod;
     private final ByteArrayOutputStream byteArrayOutputStream=new ByteArrayOutputStream();
     private WhileByteRead whileByteRead;
+    private final int bufferedSize;
 
-    public ForwardingHandler(InputStream inputStream, OutputStream outputStream,String name,OnReceivedClientMethod receivedClientMethod) {
+    public ForwardingHandler(InputStream inputStream,int bufferedSize, OutputStream outputStream,String name,OnReceivedClientMethod receivedClientMethod) {
         this.inputStream = inputStream;
         this.outputStream = outputStream;
         this.name=name;
         this.receivedClientMethod=receivedClientMethod;
+        this.bufferedSize=bufferedSize;
     }
 
     public void setOnReceive(OnReceivedClientMethod onReceive){
@@ -134,11 +167,12 @@ class ForwardingHandler implements Runnable {
         this.whileByteRead = whileByteRead;
     }
 
-    public ForwardingHandler(InputStream inputStream, OutputStream outputStream, OnReceivedClientMethod receivedClientMethod) {
+    public ForwardingHandler(InputStream inputStream,int bufferedSize, OutputStream outputStream, OnReceivedClientMethod receivedClientMethod) {
         this.inputStream = inputStream;
         this.outputStream = outputStream;
         this.receivedClientMethod = receivedClientMethod;
         this.name=Thread.currentThread().getName();
+        this.bufferedSize=bufferedSize;
     }
 
     @Override
