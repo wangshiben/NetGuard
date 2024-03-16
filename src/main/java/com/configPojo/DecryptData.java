@@ -5,6 +5,7 @@ import java.util.Arrays;
 public class DecryptData {
     private final byte[] decryptData;
     private final int targetPort;
+    private int dataLength;
 
     public DecryptData(byte[] decryptData, int targetPort) {
         this.decryptData = decryptData;

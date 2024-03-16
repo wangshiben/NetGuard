@@ -36,7 +36,7 @@ public class TransmitServer extends Thread {//TCP转发服务,由临时节点转
 
 
     public void setBufferedSize(int bufferedSize) {
-        if (bufferedSize==0) throw new IllegalArgumentException("缓冲区大小不能为0!");
+        if (bufferedSize<10) throw new IllegalArgumentException("缓冲区过小!");
         this.bufferedSize = bufferedSize;
     }
 
@@ -64,7 +64,7 @@ public class TransmitServer extends Thread {//TCP转发服务,由临时节点转
     }
 
 
-    private void CloseSocket(Socket socket){
+    private static void CloseSocket(Socket socket){
         try {
             socket.close();
         } catch (IOException e) {
@@ -91,35 +91,41 @@ public class TransmitServer extends Thread {//TCP转发服务,由临时节点转
                     Socket clientSocket = null;
                     try {
                         clientSocket = socket.accept();
+//                        System.out.println("接收到连接:"+ clientSocket.getPort());
                     } catch (IOException e) {
                         continue;
                     }
+                    if (clientSocket==null) continue;
+                    Socket finalClientSocket = clientSocket;
+                    new Thread(()->{
+                        // 连接目标服务器
+                        Socket targetSocket = null;
+                        try {
+                            targetSocket = new Socket(serverConfig.getHost(),serverConfig.getPort());
+                            System.out.println(Thread.currentThread());
+                        } catch (IOException e) {
+                           TransmitServer.CloseSocket(finalClientSocket);
+                            return;
+                        }
+                        // 创建线程处理转发
+                        ForwardingHandler clientToTargetHandler = null;
+                        try {
+                            clientToTargetHandler = new ForwardingHandler(finalClientSocket.getInputStream(),this.bufferedSize, targetSocket.getOutputStream(),"readClient:",null);
+                            if (this.ClientReceiveBytesMethod !=null) clientToTargetHandler.setOnReceive(this.ClientReceiveBytesMethod);
+                            if (this.ClientByteRead !=null) clientToTargetHandler.setWhileByteRead(this.ClientByteRead);
+                            Thread clientToTargetThread = new Thread(clientToTargetHandler);
+                            clientToTargetThread.start();
+//                            System.out.println("已建立与目标端口连接");
+                            ForwardingHandler targetToClientHandler = new ForwardingHandler(targetSocket.getInputStream(),this.bufferedSize+100, finalClientSocket.getOutputStream(),"readServer:",null);
+                            Thread targetToClientThread = new Thread(targetToClientHandler);
+                            if (this.ServerReceiveBytesMethod !=null) clientToTargetHandler.setOnReceive(this.ServerReceiveBytesMethod);
+                            if (this.ServerByteRead !=null) clientToTargetHandler.setWhileByteRead(this.ServerByteRead);
+                            targetToClientThread.start();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
 
-                    // 连接目标服务器
-                    Socket targetSocket = null;
-                    try {
-                        targetSocket = new Socket(serverConfig.getHost(),serverConfig.getPort());
-                    } catch (IOException e) {
-                       CloseSocket(clientSocket);
-                       continue;
-                    }
-                    // 创建线程处理转发
-                    ForwardingHandler clientToTargetHandler = null;
-                    try {
-                        clientToTargetHandler = new ForwardingHandler(clientSocket.getInputStream(),this.bufferedSize, targetSocket.getOutputStream(),"readClient:",null);
-                       if (this.ClientReceiveBytesMethod !=null) clientToTargetHandler.setOnReceive(this.ClientReceiveBytesMethod);
-                       if (this.ClientByteRead !=null) clientToTargetHandler.setWhileByteRead(this.ClientByteRead);
-                        Thread clientToTargetThread = new Thread(clientToTargetHandler);
-                        clientToTargetThread.start();
-
-                        ForwardingHandler targetToClientHandler = new ForwardingHandler(targetSocket.getInputStream(),this.bufferedSize, clientSocket.getOutputStream(),"readServer:",null);
-                        Thread targetToClientThread = new Thread(targetToClientHandler);
-                        if (this.ServerReceiveBytesMethod !=null) clientToTargetHandler.setOnReceive(this.ServerReceiveBytesMethod);
-                        if (this.ServerByteRead !=null) clientToTargetHandler.setWhileByteRead(this.ServerByteRead);
-                        targetToClientThread.start();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
                 } else {
                    return;
                 }
@@ -127,67 +133,5 @@ public class TransmitServer extends Thread {//TCP转发服务,由临时节点转
         }
     }
 
-    private ByteArrayOutputStream readAllBytes(InputStream stream) throws IOException {
-        byte[] buffered = new byte[1024];
-        int off = 0;
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        while ((off = stream.read(buffered)) != -1) {
-
-            outputStream.write(buffered, 0, off);
-        }
-        return outputStream;
-    }
 }
 
-class ForwardingHandler implements Runnable {
-    private final InputStream inputStream;
-    private final OutputStream outputStream;
-    private final String name;
-    private OnReceivedClientMethod receivedClientMethod;
-    private final ByteArrayOutputStream byteArrayOutputStream=new ByteArrayOutputStream();
-    private WhileByteRead whileByteRead;
-    private final int bufferedSize;
-
-    public ForwardingHandler(InputStream inputStream,int bufferedSize, OutputStream outputStream,String name,OnReceivedClientMethod receivedClientMethod) {
-        this.inputStream = inputStream;
-        this.outputStream = outputStream;
-        this.name=name;
-        this.receivedClientMethod=receivedClientMethod;
-        this.bufferedSize=bufferedSize;
-    }
-
-    public void setOnReceive(OnReceivedClientMethod onReceive){
-        this.receivedClientMethod=onReceive;
-    }
-
-    public void setWhileByteRead(WhileByteRead whileByteRead) {
-        this.whileByteRead = whileByteRead;
-    }
-
-    public ForwardingHandler(InputStream inputStream,int bufferedSize, OutputStream outputStream, OnReceivedClientMethod receivedClientMethod) {
-        this.inputStream = inputStream;
-        this.outputStream = outputStream;
-        this.receivedClientMethod = receivedClientMethod;
-        this.name=Thread.currentThread().getName();
-        this.bufferedSize=bufferedSize;
-    }
-
-    @Override
-    public void run() {
-        try {
-            byte[] buffer = new byte[this.bufferedSize];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                if (this.whileByteRead!=null) buffer = this.whileByteRead.ReadByte(buffer,0,bytesRead);
-                outputStream.write(buffer, 0, bytesRead);
-                byteArrayOutputStream.write(buffer,0,bytesRead);
-                if (this.receivedClientMethod!=null) this.receivedClientMethod.OnReceiveClientBytes(byteArrayOutputStream.toByteArray());
-                byteArrayOutputStream.flush();
-                outputStream.flush();
-            }
-            byteArrayOutputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}

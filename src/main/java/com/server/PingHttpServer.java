@@ -50,8 +50,13 @@ class Handler implements HttpHandler {
         exchange.getResponseHeaders().add("X",publicKey.getXCoord().toBigInteger().toString());
         exchange.getResponseHeaders().add("Y",publicKey.getYCoord().toBigInteger().toString());
         exchange.sendResponseHeaders(200, response.getBytes().length);
-
-
+        System.out.println("已连接");
+//        try {
+//            Thread.sleep(1000);
+//            System.out.println("模拟大请求完成");
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
         OutputStream outputStream = exchange.getResponseBody();
         outputStream.write(response.getBytes());
         outputStream.flush();
